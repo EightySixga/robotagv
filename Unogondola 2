@@ -1,0 +1,137 @@
+#include <LCD.h>
+#include <LiquidCrystal_I2C.h>
+#include <Wire.h>
+LiquidCrystal_I2C lcd(0x27, 2, 1, 0, 4, 5, 6, 7, 3, POSITIVE);
+
+#define pb_up 7
+#define pb_down 6
+//motor def
+#define L1 8
+#define L2 9
+#define motor_ki 10
+#define R1 11
+#define R2 12
+#define motor_ka 13
+//insialisasi pin push button
+int spd_pwm;
+// variabel looping
+int flag_on=0;
+int flag_off=0;
+int S1=0,S2=0,S3=0,S4=0;
+int set_pwm = 25; 
+void setup() {
+  // put your setup code here, to run once:
+Serial.begin(9600);
+  lcd.begin(16, 2);
+  lcd.setCursor(2, 0);
+  lcd.print("GDL_PEMI NYS");
+  lcd.setCursor(0, 1);
+  lcd.print("SPEED = ");
+  lcd.setCursor(8, 1);
+  lcd.print(set_pwm);
+
+  pinMode(motor_ka, OUTPUT);
+  pinMode(motor_ki, OUTPUT);
+  pinMode(L1, OUTPUT);
+  pinMode(L2, OUTPUT);
+  pinMode(R1, OUTPUT);
+  pinMode(R2, OUTPUT);
+
+  //pin mode buttons
+
+
+  ///
+
+
+  pinMode(pb_up, INPUT_PULLUP);
+  pinMode(pb_down, INPUT_PULLUP);
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+ if (digitalRead(pb_up) == LOW) // program untuk menambah PWM
+  {
+    if (set_pwm >= 10 && set_pwm < 100)
+    {
+      set_pwm += 5;
+      lcd.clear();
+      lcd.setCursor(2, 0);
+      lcd.print("GDL_PEMI NYS");
+      lcd.setCursor(0, 1);
+      lcd.print("SPEED = ");
+      lcd.setCursor(8, 1);
+      lcd.print(set_pwm);
+delay(200);
+    }
+  }
+  if (digitalRead(pb_down) == LOW) // program untuk mengurangi PWM
+  {
+    if (set_pwm >= 5 && set_pwm <= 100)
+    { 
+      set_pwm -= 5;
+      lcd.clear();
+      lcd.setCursor(2, 0);
+      lcd.print("GDL_PEMI NYS");
+      lcd.setCursor(0, 1);
+      lcd.print("SPEED = ");
+      lcd.setCursor(8, 1);
+      lcd.print(set_pwm);
+      delay(200);
+
+    }
+  }
+if(set_pwm==5){
+    spd_pwm=13;}
+if(set_pwm==10){
+    spd_pwm=26;}
+if(set_pwm==15){
+    spd_pwm=39;}
+if(set_pwm==20){
+    spd_pwm=52;}
+if(set_pwm==25){
+    spd_pwm=65;}
+if(set_pwm==30){
+    spd_pwm=78;}
+if(set_pwm==35){
+    spd_pwm=91;}
+if(set_pwm==40){
+    spd_pwm=104;}
+if(set_pwm==45){
+    spd_pwm=117;}
+    if(set_pwm==50){
+    spd_pwm=130;}
+    if(set_pwm==55){
+    spd_pwm=143;}
+if(set_pwm==60){
+    spd_pwm=156;}
+if(set_pwm==65){
+    spd_pwm=169;}
+if(set_pwm==70){
+    spd_pwm=182;}
+if(set_pwm==75){
+    spd_pwm=195;}
+if(set_pwm==80){
+    spd_pwm=208;}
+if(set_pwm==85){
+    spd_pwm=221;}
+if(set_pwm==90){
+    spd_pwm=234;}
+if(set_pwm==95){
+    spd_pwm=247;}
+if(set_pwm==100){
+    spd_pwm=255;}
+
+lurus();
+Serial.println(spd_pwm);
+}
+
+void lurus() // fungsi lurus 'bisa dirubah2 untuk kalibrasi'
+{
+
+  analogWrite(motor_ka, spd_pwm);
+  analogWrite(motor_ki, spd_pwm);
+  digitalWrite(R1, HIGH);
+  digitalWrite(R2, LOW);
+  digitalWrite(L1, HIGH);
+  digitalWrite(L2, LOW);
+}
