@@ -1,0 +1,709 @@
+#include <Keypad.h> //import keypad library
+//===============================
+byte tagID[12];
+boolean tagread=false;
+String isi_rfid="";
+long int rfid_tujuan=2151424;
+
+
+//-----------------------KEYPAD
+
+
+const byte ROWS = 4; // four rows
+
+const byte COLS = 4; // four columns
+String temp_rf;
+String carline_tanto;
+String Num_1;
+char keypressed;
+char keymap [ROWS] [COLS] = {
+{'1', '2', '3','A'},
+{'4', '5', '6','B'},
+{'7', '8', '9','C'},
+{'*', '0', '#','D'}
+};
+
+
+byte roPins[ROWS]=  {A7,A6,A5,A4}; //Rows 0 to 3
+byte coPins[COLS]= {A3,A2,A1,A0}; //Columns 0 to 2
+
+Keypad kpd= Keypad(makeKeymap(keymap), roPins, coPins, ROWS, COLS);
+
+
+#include <LCD.h>
+#include <LiquidCrystal_I2C.h>
+#include <Wire.h>
+LiquidCrystal_I2C lcd(0x27, 2, 1, 0, 4, 5, 6, 7, 3, POSITIVE);
+//Ubah alamat 0x27 dengan alamat i2C kamu
+
+//inisialisasi pin driver motor
+#define L1 8
+#define L2 9
+#define motor_ki 10
+#define R1 11
+#define R2 12
+#define motor_ka 13
+
+//inisialisasi pin push button
+#define pb_start 41
+#define pb_stop 43
+#define pb_up 52
+#define pb_down 53
+//#define sickcent 7
+#define prinfra1 6
+#define prinfra2 7
+#define prinfra3 5
+#define prinfra4 4
+#define prinfra5 7
+//inisialisasi pin sensor garis
+//22 paling kiri
+
+#define Sensor1 22
+#define Sensor2 23
+#define Sensor3 24
+#define Sensor4 25
+#define Sensor5 26
+#define Sensor6 27
+#define Sensor7 28
+//#define Sensor8 29
+
+//inisialisasi pin limit switch
+#define limit1 44
+#define limit2 46
+/*
+//inisialisasi pin ultrasonic
+#define trig1 36
+#define echo1 37
+#define trig2 38
+#define echo2 39
+#define trig3 40
+#define echo3 41
+*/
+//inisialisasi pin buzzer
+//#define buzzer 7
+int pwm_awal=50;
+int pwmKA = 0, pwmKI = 0, pwm_dikit = 0, set_pwm = 150;            // inisialisasi PWM
+int flag_jalan = 0, flag_berhenti = 0, flag_halangan = 0;           // inisialisasi flag untuk melakukan looping di dalam loop
+int S1 = 0, S2 = 0, S3 = 0, S4 = 0, S5 = 0, S6 = 0, S7 = 0, S8 = 0; // inisialisasi awal semua sensor garis
+long duration1 = 0, duration2 = 0, duration3 = 0, distance1 = 0, distance2 = 0, distance3 = 0;                   // inisialisasi awal durasi pembacaan sensor ultrasonik dan inisialisasi awal jarak yang akan dihitung
+int kode = 0, i = 0;                                                // kode digunakan pada kondisi keluar jalur, i digunakan untuk looping buzzer
+int xy =0;
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(9600);
+  lcd.begin(16, 2);
+  lcd.setCursor(2, 0);
+  lcd.print("PAV_PEMI AGV");
+  lcd.setCursor(0, 1);
+  lcd.print("PWM = ");
+  lcd.setCursor(6, 1);
+  lcd.print(set_pwm);
+
+  pinMode(motor_ka, OUTPUT);
+  pinMode(motor_ki, OUTPUT);
+  pinMode(L1, OUTPUT);
+  pinMode(L2, OUTPUT);
+  pinMode(R1, OUTPUT);
+  pinMode(R2, OUTPUT);
+
+  pinMode(pb_start, INPUT_PULLUP);
+  pinMode(pb_stop, INPUT_PULLUP);
+  pinMode(pb_up, INPUT_PULLUP);
+  pinMode(pb_down, INPUT_PULLUP);
+pinMode(prinfra1,INPUT_PULLUP);
+pinMode(prinfra2,INPUT_PULLUP);
+  pinMode(prinfra3,INPUT_PULLUP);
+  pinMode(prinfra4,INPUT_PULLUP);
+  pinMode(prinfra5,INPUT_PULLUP);
+  pinMode(Sensor1, INPUT);
+  pinMode(Sensor2, INPUT);
+  pinMode(Sensor3, INPUT);
+  pinMode(Sensor4, INPUT);
+  pinMode(Sensor5, INPUT);
+  pinMode(Sensor6, INPUT);
+  pinMode(Sensor7, INPUT);
+//  pinMode(Sensor8, INPUT);
+//pinMode(sickcent, INPUT_PULLUP);
+  pinMode(limit1, INPUT_PULLUP); // limit di pull up karena pembacaan seperti push button
+  pinMode(limit2, INPUT_PULLUP); // limit di pull up karena pembacaan seperti push button
+/*
+  pinMode(trig1, OUTPUT);
+  pinMode(echo1, INPUT);
+  pinMode(trig2, OUTPUT);
+  pinMode(echo2, INPUT);
+  pinMode(trig3, OUTPUT);
+  pinMode(echo3, INPUT);
+*/
+//  pinMode(buzzer, OUTPUT);
+}
+
+void loop() {
+  
+   
+  keypressed = kpd.getKey();
+   if (keypressed != NO_KEY)
+     { 
+          
+          Serial.print(keypressed);
+     temp_rf+=keypressed;
+       
+ lcd.clear();
+      lcd.setCursor(2, 0);
+      lcd.print("PAV_PEMI AGV");
+      lcd.setCursor(0, 1);
+      lcd.print("PWM = ");
+      lcd.setCursor(6, 1);
+      lcd.print(set_pwm);
+     lcd.setCursor(11,1);
+          lcd.print(temp_rf);
+     }
+compare_kard();
+
+  // put your main code here, to run repeatedly:
+  S1 = digitalRead(Sensor1);
+  S2 = digitalRead(Sensor2);
+  S3 = digitalRead(Sensor3);
+  S4 = digitalRead(Sensor4);
+  S5 = digitalRead(Sensor5);
+  S6 = digitalRead(Sensor6);
+  S7 = digitalRead(Sensor7);
+//  S8 = digitalRead(Sensor8);
+ // /*
+  //*/
+/*  
+  digitalWrite(trig1, LOW);
+  digitalWrite(trig2, LOW);
+  digitalWrite(trig3, LOW);
+  
+  digitalWrite(trig1, HIGH);
+  digitalWrite(trig2, HIGH);
+  digitalWrite(trig3, HIGH);
+
+  delayMicroseconds(10);
+  
+  digitalWrite(trig1, LOW);
+  duration1 = pulseIn(echo1, HIGH);
+  distance1 = duration1 / 29 / 2;
+  
+  digitalWrite(trig2, LOW);
+  duration2 = pulseIn(echo2, HIGH);
+  distance2 = duration2 / 29 / 2;
+  
+  digitalWrite(trig3, LOW);
+  duration3 = pulseIn(echo3, HIGH);
+  distance3 = duration3 / 29 / 2;
+  /*
+  Serial.print(distance1); Serial.print(" cm"); Serial.print("\t");
+  Serial.print(distance2); Serial.print(" cm"); Serial.print("\t");
+  Serial.print(distance3); Serial.print(" cm"); Serial.println();
+  // */
+//read_tagid();
+  if (digitalRead(pb_up) == LOW) // program untuk menambah PWM
+  {
+    if (set_pwm >= 50 && set_pwm < 255)
+    {
+      set_pwm += 5;
+      lcd.clear();
+      lcd.setCursor(2, 0);
+      lcd.print("PAV_PEMI AGV");
+      lcd.setCursor(0, 1);
+      lcd.print("PWM = ");
+      lcd.setCursor(6, 1);
+      lcd.print(set_pwm);
+      delay(200);
+    }
+  }
+  if (digitalRead(pb_down) == LOW) // program untuk mengurangi PWM
+  {
+    if (set_pwm > 50 && set_pwm <= 255)
+    {
+      set_pwm -= 5;
+      lcd.clear();
+      lcd.setCursor(2, 0);
+      lcd.print("PAV_PEMI AGV");
+      lcd.setCursor(0, 1);
+      lcd.print("PWM = ");
+      lcd.setCursor(6, 1);
+      lcd.print(set_pwm);
+      delay(200);
+    }
+  }
+  if (digitalRead(pb_start) == LOW) // program untuk memulai start
+  { maju_dikit2(); flag_jalan = 1; }
+
+//  digitalWrite(buzzer, LOW);
+
+  while (flag_jalan == 1) // loop untuk jalannya robot mengikuti garis
+  {
+   read_tagid();
+    //
+    S1 = digitalRead(Sensor1);
+    S2 = digitalRead(Sensor2);
+    S3 = digitalRead(Sensor3);
+    S4 = digitalRead(Sensor4);
+    S5 = digitalRead(Sensor5);
+    S6 = digitalRead(Sensor6);
+    S7 = digitalRead(Sensor7);
+Serial.print(S1);
+  Serial.print("\t");
+  Serial.print(S2);
+  Serial.print("\t");
+  Serial.print(S3);
+  Serial.print("\t");
+  Serial.print(S4);
+  Serial.print("\t");
+  Serial.print(S5);
+  Serial.print("\t");
+  Serial.print(S6);
+  Serial.print("\t");
+  Serial.print(S7);
+  Serial.print("\t");
+//  Serial.print(S8);
+  Serial.println();
+  
+//    S8 = digitalRead(Sensor8);
+/*    
+    digitalWrite(trig1, LOW);
+    digitalWrite(trig2, LOW);
+    digitalWrite(trig3, LOW);
+    
+    digitalWrite(trig1, HIGH);
+    digitalWrite(trig2, HIGH);
+    digitalWrite(trig3, HIGH);
+  
+    delayMicroseconds(10);
+    
+    digitalWrite(trig1, LOW);
+    duration1 = pulseIn(echo1, HIGH);
+    distance1 = duration1 / 29 / 2;
+    
+    digitalWrite(trig2, LOW);
+    duration2 = pulseIn(echo2, HIGH);
+    distance2 = duration2 / 29 / 2;
+       \
+       
+    digitalWrite(trig3, LOW);
+    duration3 = pulseIn(echo3, HIGH);
+    distance3 = duration3 / 29 / 2;
+//*/
+    lcd.setCursor(11, 1);
+    lcd.print("Jalan");
+
+//    digitalWrite(buzzer, LOW);
+
+    //========== kondisi di tengah =========
+    if (S1 == 0 && S2 == 0 && S3 == 1 && S4 == 1 && S5 == 1 && S6 == 0 && S7 == 0) // 0 0 1 1 1 0 0
+    { lurus(); kode = 3;}
+ if (S1 == 0 && S2 == 0 && S3 == 1 && S4 == 1 && S5 == 0 && S6 == 0 && S7 == 0) // 0 0 1 1 0 0 0
+    { lurus(); kode = 3;}
+    if (S1 == 0 && S2 == 0 && S3 == 0 && S4 == 1 && S5 == 1 && S6 == 0 && S7 == 0) // 0 0 0 1 1 0 0
+    { lurus(); kode = 3;}
+   // if (S1 == 0 && S2 == 0 && S3 == 0 && S4 == 0 && S5 == 1 && S6 == 0 && S7 == 0) // 0 0 0 0 1 0 0
+    //{ lurus(); kode = 2;}    
+    //======= robot mengarah ke kanan ======
+
+    if (S1 == 0 && S2 == 1 && S3 == 1 && S4 == 1 && S5 == 0 && S6 == 0 && S7 == 0) // 0 1 1 1 0 0 0
+    { lurus(); kode = 3; }
+    if (S1 == 0 & S2 == 1 && S3 == 1 && S4 == 0 && S5 == 0 && S6 == 0 && S7 == 0) // 0 1 1 0 0 0 0
+    { lurus(); kode = 3; }
+    if (S1 == 1 && S2 == 1 && S3 == 1 && S4 == 0 && S5 == 0 && S6 == 0 && S7 == 0) // 1 1 1 0 0 0 0
+    { kiri_dikit(); kode = 3;}
+    if (S1 == 1 && S2 == 1 && S3 == 0 && S4 == 0 && S5 == 0 && S6 == 0 && S7 == 0) // 1 1 0 0 0 0 0
+    { kiri_sedang();kode = 3; }
+    if (S1 == 1 && S2 == 0 && S3 == 0 && S4 == 0 && S5 == 0 && S6 == 0 && S7 == 0) // 1 0 0 0 0 0 0
+    { kiri_banyak(); kode = 1; }
+    
+    //======= robot mengarah ke kiri ========
+
+    if (S1 == 0 && S2 == 0 && S3 == 0 && S4 == 1 && S5 == 1 && S6 == 1 && S7 == 0) // 0 0 0 1 1 1 0
+    { lurus(); kode = 3; }
+    if (S1 == 0 && S2 == 0 && S3 == 0 && S4 == 0 && S5 == 1 && S6 == 1 && S7 == 0) // 0 0 0 0 1 1 0
+    { lurus(); kode = 3; }
+    if (S1 == 0 && S2 == 0 && S3 == 0 && S4 == 0 && S5 == 1 && S6 == 1 && S7 == 1) // 0 0 0 0 1 1 1
+    { kanan_dikit();kode = 3; }
+    if (S1 == 0 && S2 == 0 && S3 == 0 && S4 == 0 && S5 == 0 && S6 == 1 && S7 == 1) // 0 0 0 0 0 1 1
+    { kanan_sedang(); kode = 3;}
+    if (S1 == 0 && S2 == 0 && S3 == 0 && S4 == 0 && S5 == 0 && S6 == 0 && S7 == 1) // 0 0 0 0 0 0 1
+    { kanan_banyak(); kode = 2; }
+    
+    //========== keluar jalur ==============
+    if (S1 == 0 && S2 == 0 && S3 == 0 && S4 == 0 && S5 == 0 && S6 == 0 && S7 == 0) // 0 0 0 0 0 0 0
+    {
+      if (kode == 1) // kondisi apabila robot keluar jalur ke arah kanan
+      { kiri_buanyak(); }
+      if (kode == 2) // kondisi apabila robot keluar jalur ke arah kiri
+      { kanan_buanyak(); }
+ //     if (kode == 3)      // kondisi apabila ada jalur terputus
+   //   { flag_berhenti = 1; flag_jalan = 0; }
+    }
+    
+///*  ====TUNGGU  //========== deteksi perhentian ======
+     if (digitalRead(prinfra4)==LOW||digitalRead(prinfra5)==LOW)
+   { 
+      //============================
+
+      
+      if (set_pwm <= 100)
+      { lurus(); delay(10); }
+      berhenti(); 
+      for (i = 2; i >= 0; i--)
+      {
+/*        if (i % 2 == 0)                  // kondisi saat buzzer aktif
+        { digitalWrite(buzzer, HIGH); }
+        else if (i % 2 != 0)            // kondisi saat buzzer mati
+        { digitalWrite(buzzer, LOW); }  //*/
+        delay(1000);
+        lcd.setCursor(10, 1);
+        lcd.print("Tunggu");
+        if (digitalRead(pb_stop) == LOW)
+        { flag_berhenti = 1; flag_jalan = 0; }
+        lcd.setCursor(15, 0);
+        lcd.print(i);
+      }
+//      digitalWrite(buzzer, LOW);
+      lcd.setCursor(10, 1);
+      lcd.print(" ");
+      lcd.setCursor(15, 0);
+      lcd.print(" ");
+    } //berhenti 10 detik --> 1000ms * 10 kali looping for, kemudian maju dikit2 2 detik
+//*/    
+    if ((S1 == 1 && S2 == 1 && S3 == 1 && S5 == 1 && S6 == 1 && S7 == 1)||digitalRead(pb_stop) == LOW)
+    { flag_berhenti = 1; flag_jalan = 0; }
+/*    
+    if (distance1 <= 30 || distance2 <= 40 || distance3 <= 30)
+    { flag_halangan = 1; flag_jalan = 0; }
+  */  
+    if (digitalRead(limit1) == LOW || digitalRead(limit2) == LOW)
+    { flag_berhenti = 1; flag_jalan = 0; }
+ 
+  }
+
+  while (flag_berhenti == 1) // loop kondisi berhenti
+  {
+    berhenti();
+    lcd.setCursor(11, 1);
+    lcd.print("Stop ");
+    if (digitalRead(pb_start) == LOW) // jika ditekan start dia akan jalan
+    { flag_jalan = 1; flag_berhenti = 0; }
+    
+    if (digitalRead(pb_up) == LOW) // jika ditekan pb_up akan keluar loop
+    { flag_berhenti = 0; }
+    
+    if (digitalRead(pb_down) == LOW) // jika ditekan pb_down akan keluar loop
+    { flag_berhenti = 0; }
+  }
+/*
+  while (flag_halangan == 1) // loop untuk apabila ada halangan
+  {
+    berhenti();
+    lcd.setCursor(11, 1);
+    lcd.print("Awas ");
+
+    digitalWrite(trig1, LOW);
+    digitalWrite(trig2, LOW);
+    digitalWrite(trig3, LOW);
+    
+    digitalWrite(trig1, HIGH);
+    digitalWrite(trig2, HIGH);
+    digitalWrite(trig3, HIGH);
+  
+    delayMicroseconds(10);
+    
+    digitalWrite(trig1, LOW);
+    duration1 = pulseIn(echo1, HIGH);
+    distance1 = duration1 / 29 / 2;
+    
+    digitalWrite(trig2, LOW);
+    duration2 = pulseIn(echo2, HIGH);
+    distance2 = duration2 / 29 / 2;
+    
+    digitalWrite(trig3, LOW);
+    duration3 = pulseIn(echo3, HIGH);
+    distance3 = duration3 / 29 / 2;
+
+    if (distance1 > 30 || distance2 > 40 || distance3 > 30) // jika halangan di depan lebih dari 30, 50, 30 akan jalan lagi
+    { flag_halangan = 0; flag_jalan = 1; }
+    
+    if (digitalRead(pb_stop) == LOW) // jika ditekan pb_stop dia akan kelaur loop halangan dan masuk loop berhenti
+    { flag_halangan = 0; flag_berhenti = 1; }
+  } //*/
+}
+
+void berhenti() // fungsi berhenti 'bisa dirubah2 untuk kalibrasi'
+{
+  analogWrite(motor_ka, 0);
+  analogWrite(motor_ki, 0);
+  digitalWrite(R1, LOW);
+  digitalWrite(R2, LOW);
+  digitalWrite(L1, LOW);
+  digitalWrite(L2, LOW);
+  delay(50);
+  analogWrite(motor_ka, 0);
+  analogWrite(motor_ki, 0);
+  digitalWrite(R1, LOW);
+  digitalWrite(R2, HIGH);
+  digitalWrite(L1, LOW);
+  digitalWrite(L2, HIGH);
+  delay(100);
+}
+
+
+void lurus() // fungsi lurus 'bisa dirubah2 untuk kalibrasi'
+{
+  pwmKA = 200;
+  pwmKI = 200;
+  analogWrite(motor_ka, pwmKA);
+  analogWrite(motor_ki, pwmKI);
+  digitalWrite(R1, HIGH);
+  digitalWrite(R2, LOW);
+  digitalWrite(L1, HIGH);
+  digitalWrite(L2, LOW);
+}
+
+
+void kanan_dikit() // fungsi kanan dikit 'bisa dirubah2 untuk kalibrasi'
+{  
+    pwmKA = 150;
+    pwmKI = 200;
+    analogWrite(motor_ka, pwmKA);
+    analogWrite(motor_ki, pwmKI);
+    digitalWrite(R1, HIGH);
+    digitalWrite(R2, LOW);
+    digitalWrite(L1, HIGH);
+    digitalWrite(L2, LOW);
+  }
+ 
+void kanan_sedang() // fungsi kanan sedang 'bisa dirubah2 untuk kalibrasi'
+{  
+  pwmKA = 100;
+    pwmKI = 200 ;
+    analogWrite(motor_ka, pwmKA);
+    analogWrite(motor_ki, pwmKI);
+    digitalWrite(R1, HIGH);
+    digitalWrite(R2, LOW);
+    digitalWrite(L1, HIGH);
+    digitalWrite(L2, LOW);
+  }
+
+void kanan_banyak() // fungsi kanan banyak 'bisa dirubah2 untuk kalibrasi'
+{  
+    pwmKA = 90;
+    pwmKI = 200;
+    analogWrite(motor_ka, pwmKA);
+    analogWrite(motor_ki, pwmKI);
+    digitalWrite(R1, HIGH);
+    digitalWrite(R2, LOW);
+    digitalWrite(L1, HIGH);
+    digitalWrite(L2, LOW);
+  }
+
+void kanan_buanyak() // fungsi kanan banyak 'bisa dirubah2 untuk kalibrasi'
+{  
+     
+    pwmKA = 80;
+    pwmKI = 0;
+    analogWrite(motor_ka, pwmKA);
+    analogWrite(motor_ki, pwmKI);
+    digitalWrite(R1, LOW);
+    digitalWrite(R2, HIGH);
+    digitalWrite(L1, HIGH);
+    digitalWrite(L2, LOW);
+  }
+
+void kiri_dikit() // fungsi kiri dikit 'bisa dirubah2 untuk kalibrasi'
+  {
+      pwmKA = 150 ;
+    pwmKI = 200 ;
+    analogWrite(motor_ka, pwmKA);
+    analogWrite(motor_ki, pwmKI);
+    digitalWrite(R1, HIGH);
+    digitalWrite(R2, LOW);
+    digitalWrite(L1, HIGH);
+    digitalWrite(L2, LOW);
+  }
+void kiri_sedang() // fungsi kiri sedang 'bisa dirubah2 untuk kalibrasi'
+  {
+      pwmKA = 200 ;
+    pwmKI = 100 ;
+    analogWrite(motor_ka, pwmKA);
+    analogWrite(motor_ki, pwmKI);
+    digitalWrite(R1, HIGH);
+    digitalWrite(R2, LOW);
+    digitalWrite(L1, HIGH);
+    digitalWrite(L2, LOW);
+  }
+ 
+void kiri_banyak() // fungsi kiri banyak 'bisa dirubah2 untuk kalibrasi'
+  {
+      pwmKA = 200;
+    pwmKI = 90 ; 
+    analogWrite(motor_ka, pwmKA);
+    analogWrite(motor_ki, pwmKI);
+    digitalWrite(R1, HIGH);
+    digitalWrite(R2, LOW);
+    digitalWrite(L1, HIGH);
+    digitalWrite(L2, LOW);
+  }
+
+void kiri_buanyak() // fungsi kiri banyak 'bisa dirubah2 untuk kalibrasi'
+  { 
+    pwmKA = 0;
+    pwmKI = 80;
+    analogWrite(motor_ka, pwmKA);
+    analogWrite(motor_ki, pwmKI);
+       digitalWrite(R1, HIGH);
+    digitalWrite(R2, LOW);
+    digitalWrite(L1, LOW);
+    digitalWrite(L2, HIGH);
+    }
+
+void maju_dikit2() // fungsi maju dikit2 'bisa dirubah2 untuk kalibrasi'
+{
+  for (pwm_dikit = 0; pwm_dikit <= set_pwm; pwm_dikit += 5)
+  {
+    pwmKA = pwm_dikit;
+    pwmKI = pwm_dikit;
+    analogWrite(pwmKA, pwmKA);
+    analogWrite(pwmKI, pwmKI);
+    digitalWrite(R1, HIGH);
+    digitalWrite(R2, LOW);
+    digitalWrite(L1, HIGH);
+    digitalWrite(L2, LOW);
+    delay(10);
+  }
+}//================NEW RFID
+void read_tagid(){
+  if(Serial.available()>=13)      //Make sure all the frame is received
+  {
+    if(Serial.read()==0x02)       //Check for the start byte = 0x02
+    {
+      tagread=true;                //New tag is read
+      for(int index=0;index<sizeof(tagID);index++)
+      {
+        byte rfid_r=Serial.read();
+        //convert from ASCII value to valu range from 0 to 9 and A to F
+        if( rfid_r >= '0' && rfid_r <= '9')
+        rfid_r = rfid_r - '0';
+        else if( rfid_r >= 'A' && rfid_r <= 'F')
+        rfid_r = 10 + rfid_r - 'A';
+        tagID[index]=rfid_r;
+      }
+    }
+    else
+    {
+      tagread=false;                //Discard and skip
+    }
+  }
+  if(tagread==true)                 //New tag is read
+  {
+    print_tag();                    //Display the tag ID
+    clear_tag();                    //Clear the tag ID and ready for next tag
+    tagread=false;
+  }
+  delay(10);
+}
+void print_tag()                    //Subroutine to display the tagID content
+{
+  Serial.print("Tag ID: ");        
+  for(int index=0;index<10;index++)
+  {
+    isi_rfid+=tagID[index];  //Display tagID
+  }
+       //Display checksum
+ Serial.println(isi_rfid);
+ 
+ if(isi_rfid.toInt()==rfid_tujuan){
+    //  Serial.println("36");
+      flag_berhenti=1;
+      flag_jalan=0;
+      digitalWrite(LED_BUILTIN,HIGH);
+      if (digitalRead(pb_start) == LOW) // jika ditekan start dia akan jalan
+    { flag_jalan = 1; flag_berhenti = 0; }
+      }
+  
+}
+
+void clear_tag()                    //Subroutine to clear the tagID content
+{  
+
+  for(int index=0;index<sizeof(tagID);index++)
+
+  {
+
+    tagID[index]=0;
+isi_rfid="";
+  }
+
+}
+
+void compare_kard(){
+//char Hukey = kpd.getKey();
+ //if(Hukey!=NO_KEY){
+ //lcd.setCursor(11, 1);
+ //lcd.print(Hukey);
+ //}
+  
+     if (keypressed =='#')
+    
+    {carline_tanto=temp_rf;
+     //==================DATA INPUT KEYPAD == RFID KARD
+     
+     if(carline_tanto=="113#"){
+      rfid_tujuan=2151424;
+     //lcd.setCursor(11, 1);
+      //lcd.print(carline_tanto);
+      digitalWrite(LED_BUILTIN, HIGH);
+      Serial.println("");
+      //Serial.println(carline_tanto);
+       //Serial.println(rfid_tujuan);
+     //============== D/C
+     lcd.setCursor(11, 1);
+    lcd.print("[D/C]");
+     temp_rf="";}
+     
+     if(carline_tanto=="114#"){
+      rfid_tujuan=214877;
+     //lcd.setCursor(11, 1);
+      //lcd.print(carline_tanto);
+      digitalWrite(LED_BUILTIN, HIGH);
+      Serial.println("");
+     // Serial.println(carline_tanto);
+     //Serial.println(rfid_tujuan);
+     //=============== QA
+     lcd.setCursor(11, 1);
+    lcd.print("Q-AP");
+     temp_rf="";
+     }
+if(carline_tanto=="111#"){
+      rfid_tujuan=10056135;
+      //lcd.setCursor(11, 1);
+      //lcd.print(carline_tanto);
+      digitalWrite(LED_BUILTIN, HIGH);
+      Serial.println("");
+   //   Serial.println(carline_tanto);
+       //Serial.println(rfid_tujuan);
+      lcd.setCursor(11, 1);
+    lcd.print("LIFT");
+      //============== LIFT
+     temp_rf="";}
+     
+     if(carline_tanto=="112#"){
+       
+       rfid_tujuan=2159914;
+      //lcd.setCursor(11, 1);
+      //lcd.print(carline_tanto);
+      digitalWrite(LED_BUILTIN, HIGH);
+      
+      Serial.println("");
+      //Serial.println(carline_tanto);
+     //Serial.println(rfid_tujuan);
+     //==============
+     lcd.setCursor(11, 1);
+     lcd.print("[FG]");
+     temp_rf="";}
+     
+    }
+    
+}
+
+ 
