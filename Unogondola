@@ -1,0 +1,142 @@
+#include <LCD.h>
+#include <LiquidCrystal_I2C.h>
+#include <Wire.h>
+LiquidCrystal_I2C lcd(0x27, 2, 1, 0, 4, 5, 6, 7, 3, POSITIVE);
+
+#define pb_up 7  // Pin From Arduino ( Digital pin 7) to Push button (the other end is connected to Ground of 5 Volt DC)
+#define pb_down 6  // Pin From Arduino ( Digital pin 7) to Push button (the other end is connected to Ground of 5 Volt DC)
+//motor def
+#define L1 8  // Pin L1 in Motor Driver MOdule
+#define L2 9  // Pin L2 in Motor Driver Module
+#define motor_ki 10 // Pin FOr Left Motor ( MOTOR KIRI) This program set Both motor in the same Speed
+#define R1 11     // Pin R1 Motor Driver Module
+#define R2 12     // Pin R2 Motor Driver Module
+#define motor_ka 13   // Pin for Right Motor (MOTOR KANAN)
+//insialisasi pin push button
+int spd_pwm;   // Speed setting MAX 255 min 60 Stop 0
+// variabel looping
+int flag_on=0;
+int flag_off=0;
+
+int S1=0,S2=0,S3=0,S4=0;
+
+int set_pwm = 25; // Initial Speed of Motor DC
+
+void setup() {
+  // put your setup code here, to run once:
+Serial.begin(9600); // send Monitorin Data to Serial Port (PC)
+  lcd.begin(16, 2);   // LCD Initialization ( using i2C port (SDA , SCL PIN)
+  lcd.setCursor(2, 0);    // Set Begin Char
+  lcd.print("GDL_PEMI NYS"); // Print the char
+  lcd.setCursor(0, 1); // Set begin char
+  lcd.print("SPEED = "); // print the char
+  lcd.setCursor(8, 1); // set begin char
+  lcd.print(set_pwm); // print the char (speed pwm variable)
+
+  pinMode(motor_ka, OUTPUT);  // motor_ka set as Output 
+  pinMode(motor_ki, OUTPUT);  // motor_ki set as Output
+  pinMode(L1, OUTPUT);    // L1 set as Output
+  pinMode(L2, OUTPUT);    // L2 set as Output
+  pinMode(R1, OUTPUT);    // R1 set as Output
+  pinMode(R2, OUTPUT);    // R2 set as Output
+
+  //pin mode buttons
+
+
+  ///
+
+
+  pinMode(pb_up, INPUT_PULLUP);       // set pb_up as input WITHOUT pull up Resistor
+  pinMode(pb_down, INPUT_PULLUP);     // set pb_up as input WITHOUT pull up Resistor
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+  
+ if (digitalRead(pb_up) == LOW) // Program to add Speed manually Using PUSH BUTTON
+  {
+    if (set_pwm >= 10 && set_pwm < 100) // set LCD to Show Speed Setting 
+    {
+      set_pwm += 5;           // once PB is Push , Speed is inreased 5 times
+      lcd.clear();
+      lcd.setCursor(2, 0);
+      lcd.print("GDL_PEMI NYS");
+      lcd.setCursor(0, 1);
+      lcd.print("SPEED = ");
+      lcd.setCursor(8, 1);
+      lcd.print(set_pwm);
+delay(200);
+    }
+  }
+  if (digitalRead(pb_down) == LOW) // program untuk mengurangi PWM
+  {
+    if (set_pwm >= 5 && set_pwm <= 100)
+    { 
+      set_pwm -= 5;// once PB is Push , Speed is dereased 5 times
+      lcd.clear();
+      lcd.setCursor(2, 0);
+      lcd.print("GDL_PEMI NYS");
+      lcd.setCursor(0, 1);
+      lcd.print("SPEED = ");
+      lcd.setCursor(8, 1);
+      lcd.print(set_pwm);
+      delay(200);
+
+    }
+  }
+if(set_pwm==5){        // PROGRAM SETTING TO ADJUST SPEED FOR EM 30 MOTOR DRIVER MODULE
+    spd_pwm=13;}
+if(set_pwm==10){
+    spd_pwm=26;}
+if(set_pwm==15){
+    spd_pwm=39;}
+if(set_pwm==20){
+    spd_pwm=52;}
+if(set_pwm==25){
+    spd_pwm=65;}
+if(set_pwm==30){
+    spd_pwm=78;}
+if(set_pwm==35){
+    spd_pwm=91;}
+if(set_pwm==40){
+    spd_pwm=104;}
+if(set_pwm==45){
+    spd_pwm=117;}
+    if(set_pwm==50){
+    spd_pwm=130;}
+    if(set_pwm==55){
+    spd_pwm=143;}
+if(set_pwm==60){
+    spd_pwm=156;}
+if(set_pwm==65){
+    spd_pwm=169;}
+if(set_pwm==70){
+    spd_pwm=182;}
+if(set_pwm==75){
+    spd_pwm=195;}
+if(set_pwm==80){
+    spd_pwm=208;}
+if(set_pwm==85){
+    spd_pwm=221;}
+if(set_pwm==90){
+    spd_pwm=234;}
+if(set_pwm==95){
+    spd_pwm=247;}
+if(set_pwm==100){
+    spd_pwm=255;}
+
+lurus();              // call sub program lurus ( run motor with same speed)
+
+Serial.println(spd_pwm);
+}
+
+void lurus() // fungsi lurus 'bisa dirubah2 untuk kalibrasi'
+{
+
+  analogWrite(motor_ka, spd_pwm);         // set spd_pwm variable to motor_ka 
+  analogWrite(motor_ki, spd_pwm);         // set spd_pwm variable to motor_ki 
+  digitalWrite(R1, HIGH);             // set Right Motor Forward
+  digitalWrite(R2, LOW);              // Vice Versa if Motor want to be reversed 
+  digitalWrite(L1, HIGH);             // set Left Motor Forward
+  digitalWrite(L2, LOW);              // Vice Versa if Motor want to be reversed
+}
